@@ -84,8 +84,11 @@ func (r *router) handle(c *Context){
 		//这里主要是为了让handler能从context中获取到路径参数信息
 		c.Params = params
 		key := c.Method + "-" + n.pattern
-		r.handlers[key](c)
+		c.handlers = append(c.handlers,r.handlers[key])
 	}else{
-		c.String(http.StatusNotFound,"404 NOT FOUND:%s\n",c.Path)
+		c.handlers = append(c.handlers,func(c *Context){
+			c.String(http.StatusNotFound,"404 NOT FOUND:%s\n",c.Path)
+		})
 	}
+	c.Next()
 }

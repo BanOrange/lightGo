@@ -20,7 +20,13 @@ type Context struct{
 	Params map[string]string
 	//返回码
 	StatusCode int
+	//中间件
+	handlers []HandlerFunc
+	index int
+
 }
+
+
 
 func (c *Context) Param(key string) string{
 	value,_ := c.Params[key]
@@ -32,9 +38,18 @@ func newContext(w http.ResponseWriter,req *http.Request) *Context{
 		Req:req,
 		Path:req.URL.Path,
 		Method:req.Method,
+		index: -1,
 	}
 }
 
+//向后执行一个中间件
+func (c *Context) Next(){
+	c.index++
+	s := len(c.handlers)
+	for ; c.index<s;c.index++{
+		c.handlers[c.index](c);
+	}
+}
 func (c *Context) PostForm(key string) string{
 	return c.Req.FormValue(key)
 }
@@ -66,7 +81,11 @@ func (c *Context) JSON(code int,obj interface{}){
 	}
 }
 
-func (c *Context) Data (code int,data []byte){ 
+func (c *Context) Fail(code int,message string){
+	c.Status(code)
+	c.Writer.Write([]byte(message))
+}
+func (c *Context) Data(code int,data []byte){ 
 	c.Status(code)
 	c.Writer.Write(data)
 }
@@ -76,4 +95,6 @@ func (c *Context) HTML(code int,html string){
 	c.Status(code)
 	c.Writer.Write([]byte(html))
 }
+
+
 

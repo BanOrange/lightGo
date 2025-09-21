@@ -3,11 +3,12 @@ package lightGin
 import (
 	"net/http"
 	"log"
+	"strings"
 )
 
 //开始进行分组路由的构建
 type RouterGroup struct {
-	prefix string
+	prefix string  //前缀
 	middlewares []HandlerFunc //对中间件的支持
 	parent *RouterGroup
 	engine *Engine
@@ -78,8 +79,21 @@ func (engine *Engine) Run(addr string) (err error){
 	return http.ListenAndServe(addr,engine)
 }
 
+
+//将中间件加入到routerGroup中
+func (group *RouterGroup) Use(middlewares ...HandlerFunc){
+	group.middlewares = append(group.middlewares,middlewares...)
+}
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request){
+	var middlewares []HandlerFunc
+	//根据前缀找到需要使用的中间件
+	for _,group := range engine.groups{
+		if strings.HasPrefix(req.URL.Path,group.prefix){
+			middlewares = append(middlewares,group.middlewares...)
+		}
+	}
 	c := newContext(w,req)
+	c.handlers = middlewares
 	engine.router.handle(c)
 }
 
